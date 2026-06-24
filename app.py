@@ -1,5 +1,7 @@
 import os
+import re
 import streamlit as st
+import streamlit.components.v1 as components
 from anthropic import Anthropic
 
 st.set_page_config(
@@ -50,6 +52,27 @@ def get_client():
     return Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
 
 # ============================================================
+# HTMLコードブロックを検出して適切にレンダリング
+# ============================================================
+HTML_BLOCK = re.compile(r'```html\s*\n(.*?)```', re.DOTALL)
+
+def render_content(content):
+    last_end = 0
+    has_match = False
+    for match in HTML_BLOCK.finditer(content):
+        has_match = True
+        before = content[last_end:match.start()].strip()
+        if before:
+            st.markdown(before, unsafe_allow_html=True)
+        components.html(match.group(1), height=800, scrolling=True)
+        last_end = match.end()
+    after = content[last_end:].strip()
+    if after:
+        st.markdown(after, unsafe_allow_html=True)
+    if not has_match:
+        st.markdown(content, unsafe_allow_html=True)
+
+# ============================================================
 # 初期メッセージ
 # ============================================================
 INITIAL_MESSAGE = """\
@@ -62,9 +85,13 @@ INITIAL_MESSAGE = """\
 今日は、5つのステップで、気になっていることを整理して、最後に図にまとめていきます。
 
 ステップ1：人事・組織について気になっていることを開く
+
 ステップ2：気になっていることの全体を図にして確認する
+
 ステップ3：課題同士のつながりを一緒に探る
+
 ステップ4：課題の奥にどんなことがあるか、仮説を図にまとめる
+
 ステップ5：対面で話したいことを見つける
 
 まずは、ステップ1からはじめましょうか。
@@ -74,9 +101,12 @@ INITIAL_MESSAGE = """\
 はじめに、本題に進む前に、進め方を少しお伺いしたいです。3つだけお伺いします。選んでいただいても自由に書いていただいても大丈夫です。
 
 ① 相づち・承認はどのくらいほしいですか？
-　a. しっかり（例：「なるほど」「それは大事な観点ですね」な感じ）
-　b. 控えめ（例：「わかりました」程度で、話し合いに進もう）
-　c. いらない\
+
+a. しっかり（例：「なるほど」「それは大事な観点ですね」な感じ）
+
+b. 控えめ（例：「わかりました」程度で、話し合いに進もう）
+
+c. いらない
 """
 
 # ============================================================
@@ -99,7 +129,10 @@ st.divider()
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"], unsafe_allow_html=True)
+        if msg["role"] == "assistant":
+            render_content(msg["content"])
+        else:
+            st.markdown(msg["content"], unsafe_allow_html=True)
 
 if prompt := st.chat_input("思いつくままに話してください..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -119,6 +152,7 @@ if prompt := st.chat_input("思いつくままに話してください..."):
             for text in stream.text_stream:
                 full_reply += text
                 placeholder.markdown(full_reply + "▌", unsafe_allow_html=True)
-        placeholder.markdown(full_reply, unsafe_allow_html=True)
+        placeholder.empty()
+        render_content(full_reply)
 
     st.session_state.messages.append({"role": "assistant", "content": full_reply})
