@@ -66,10 +66,11 @@ def render_content(content):
             st.markdown(before, unsafe_allow_html=True)
         components.html(match.group(1), height=800, scrolling=True)
         last_end = match.end()
-    after = content[last_end:].strip()
-    if after:
-        st.markdown(after, unsafe_allow_html=True)
-    if not has_match:
+    if has_match:
+        after = content[last_end:].strip()
+        if after:
+            st.markdown(after, unsafe_allow_html=True)
+    else:
         st.markdown(content, unsafe_allow_html=True)
 
 # ============================================================
