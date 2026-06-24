@@ -54,7 +54,13 @@ def get_client():
 # ============================================================
 # HTMLコードブロックを検出して適切にレンダリング
 # ============================================================
-HTML_BLOCK = re.compile(r'```html\s*\n(.*?)```', re.DOTALL)
+
+# html・HTML・Htmlなど大文字小文字を問わず、閉じタグ欠落にも対応
+HTML_BLOCK = re.compile(r'```[Hh][Tt][Mm][Ll]?\s*\n(.*?)(?:```|$)', re.DOTALL)
+
+def format_choices(text):
+    """a. xxx　b. xxx のようにインライン化された選択肢を改行する。"""
+    return re.sub(r'([^\n])[　\s]+([a-f]\.\s)', r'\1\n\n\2', text)
 
 def render_content(content):
     last_end = 0
@@ -63,15 +69,17 @@ def render_content(content):
         has_match = True
         before = content[last_end:match.start()].strip()
         if before:
-            st.markdown(before, unsafe_allow_html=True)
-        components.html(match.group(1), height=800, scrolling=True)
+            st.markdown(format_choices(before), unsafe_allow_html=True)
+        html_content = match.group(1).strip()
+        if html_content:
+            components.html(html_content, height=800, scrolling=True)
         last_end = match.end()
     if has_match:
         after = content[last_end:].strip()
         if after:
-            st.markdown(after, unsafe_allow_html=True)
+            st.markdown(format_choices(after), unsafe_allow_html=True)
     else:
-        st.markdown(content, unsafe_allow_html=True)
+        st.markdown(format_choices(content), unsafe_allow_html=True)
 
 # ============================================================
 # 初期メッセージ
