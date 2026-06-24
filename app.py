@@ -42,7 +42,7 @@ def load_system_prompt():
 SYSTEM_PROMPT = load_system_prompt()
 
 MODEL = "claude-sonnet-4-6"
-MAX_TOKENS = 4096
+MAX_TOKENS = 8192
 
 # ============================================================
 # Anthropic クライアント
